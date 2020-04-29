@@ -15,6 +15,7 @@ def read_csv_file_to_dataframe(file_dir, file_name_key, missing_values, header_r
                     csv1 = pd.read_csv(os.path.join(parent, FileName), sep=',', index_col=None,
                                        encoding='utf-8',
                                        dtype=object, header=header_rows, na_values=missing_values)
+                    csv1['路径'] = parent
                     csv1['文件名'] = FileName
                     df_csv = df_csv.append(csv1)
                 else:
@@ -40,6 +41,7 @@ def read_excel_file_to_dataframe(file_dir, sheet_name_key, missing_values, skip_
                                              skiprows=skip_rows,
                                              dtype=object, na_values=missing_values, thousands=',',
                                              encoding='utf8')
+                        xls1['路径'] = parent
                         xls1['文件名'] = sht
                         df_xls = df_xls.append(xls1)
                     else:

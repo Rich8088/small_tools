@@ -25,53 +25,30 @@ rootDir = '/home/rich/MyFile/order/ini'  # 输入根目录的路径
 HOSTNAME = "127.0.0.1"
 PORT = "3306"
 DATABASE = "test"
-USERNAME = "root"
+ACCOUNT = "root"
 PASSWORD = "123456"
-DB_URI = "mysql+pymysql://{}:{}@{}:{}/{}?charset=UTF8MB4".format(USERNAME, PASSWORD, HOSTNAME, PORT,
-                                                                 DATABASE)
+DB_URI = "mysql+pymysql://{}:{}@{}:{}/{}?charset=UTF8MB4". \
+    format(ACCOUNT, PASSWORD, HOSTNAME, PORT, DATABASE)
 engine = create_engine(DB_URI, pool_recycle=3600)
 conn = engine.connect()  # --连接数据库
 Base = declarative_base()  # --基类
 
+# --------------------2、提取订单中有用信息，生成提取库-------------------------#
 
-def mapping_df_types(df):
-    type_dict = {}
-    for i, j in zip(df.columns, df.dtypes):
-        if "object" in str(j):
-            type_dict.update({i: VARCHAR(length=255)})
-        if "float" in str(j):
-            type_dict.update({i: FLOAT(precision=2, asdecimal=True)})
-        if "int" in str(j):
-            type_dict.update({i: INTEGER()})
-    return type_dict
-
-
-# ---提取sku信息,存入数据库-----#
-df_product_info = read_excel_file_to_dataframe(rootDir, 'sku信息', missing_values, 0)
-df_product_info = df_product_info.rename(
-    columns=lambda x: x.replace("'", "").replace('"', '').replace(" ", ""))
-df_product_info.dropna(axis=0, subset=['商家编码', 'sku简称'], inplace=True)
-df_product_info.drop(['文件名'], axis=1, inplace=True)
-df_product_info['更新时间'] = datetime.datetime.now()
-df_product_info['更新时间'] = pd.to_datetime(df_product_info['更新时间'])
-df_product_info.rename(
-    columns={'商家编码': 'Merchant_Encoding', 'sku简称': 'sku_name', '参考价格': 'reference_price',
-             '更新时间': 'update_time'},
+select_orders = 'SELECT 订单号,子订单号,订单状态,子订单状态,拍下时间,付款时间,子订单发货时间,交易结束时间,' \
+                '商品数字ID,SKUID,数量,淘宝单价,实际单价,实付金额,运费,实际收到金额,买家使用积分,退款状态, ' \
+                '退款货物状态,买家是否需要退货,退款申请时间,退款金额,退款阶段,退款原因,优惠分摊,优惠详情,' \
+                '买家是否评价,省,市 FROM order_info'
+df_select_orders = pd.read_sql_query(sql=select_orders, con=conn, coerce_float=True,
+                                     parse_dates=None)
+df_select_orders.rename(
+    columns={'商品数字ID': '商品ID', '数量': '购买数量', '淘宝单价': '标价', '实际单价': '购买价格',
+             '实付金额': '应付货款', '实际收到金额': '买家实际支付总金额', '买家使用积分': '买家实际支付积分'},
     inplace=True)
-# print(df_product_info)
-type_dict_order = mapping_df_types(df_product_info)
-df_product_info.to_sql(name='product_info', con=engine, if_exists='append', index=False,
-                       dtype=type_dict_order)
-# --保留最新数据
-delete_product_info = 'delete from product_info where update_time in(' \
-                      'SELECT UNUSED_ID.update_time from(' \
-                      'SELECT t3.update_time FROM product_info t3 WHERE t3.update_time not in (' \
-                      'SELECT t1.update_time FROM product_info t1 LEFT JOIN product_info t2 ' \
-                      'ON t1.Merchant_Encoding = t2.Merchant_Encoding ' \
-                      'AND t1.update_time < t2.update_time ' \
-                      'WHERE t2.Merchant_Encoding IS NULL)) AS UNUSED_ID )'
-query_delete_product_info = pd.read_sql_query(sql=delete_product_info, con=conn, coerce_float=True,
-                                              parse_dates=None, chunksize=1)
+print(df_select_orders.info())
+
+
+
 
 # --提取需要的数据，分别为订单，sku，价格表
 select_order = 'SELECT * FROM orders_pick WHERE create_time is not null'
