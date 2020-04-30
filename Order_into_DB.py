@@ -48,7 +48,7 @@ def mapping_df_types(df):
 # --------------------1、读取原始订单数据文件并存入数据库--------#
 
 # --读取订单原始数据,并输入数据库
-df_orders = read_csv_file_to_dataframe(rootDir, 'xlsx', missing_values, 0)
+df_orders = read_csv_file_to_dataframe(rootDir, 'xlsx', missing_values, 0, coding='utf-8')
 df_orders = df_orders.rename(columns=lambda x: x.replace("'", "").replace('"', '').replace(" ", ""))
 df_orders.dropna(axis=0, subset=['订单号', '子订单号'], inplace=True)
 df_orders.replace('获取失败', None, inplace=True)
@@ -107,5 +107,6 @@ df_last_orders.to_sql(name='order_info', con=engine, if_exists='append', index=F
 # writer = pd.ExcelWriter('/home/rich/File/result/excel.xlsx')
 # df_last_orders.to_excel(writer, sheet_name='1', header=True, index=False)
 # writer.save()
+print(df_last_orders.info())
 end_time = time()  # 计时结束
 print('运行时长： %f' % (end_time - start_time))  # 打印运行时长
