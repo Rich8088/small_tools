@@ -75,9 +75,9 @@ df_taoke['服务费金额'] = df_taoke['服务费金额'].astype(float)
 df_taoke = df_taoke.reset_index(drop=True)
 df_last_taoke = df_taoke.drop_duplicates(subset=['淘宝子订单编号'], keep='last')
 # --将原始数据存入数据库
-# type_dict_order = mapping_df_types(df_last_taoke)
-# df_last_taoke.to_sql(name='order_taoke', con=engine, if_exists='append', index=False,
-#                      dtype=type_dict_order)
+type_dict_order = mapping_df_types(df_last_taoke)
+df_last_taoke.to_sql(name='order_taoke', con=engine, if_exists='append', index=False,
+                     dtype=type_dict_order)
 
 # --读取订单原始数据,并输入数据库
 df_taoke_refund = read_csv_file_to_dataframe(rootDir, 'Refund', missing_values, 0, coding='utf-8')
@@ -106,9 +106,9 @@ df_taoke_refund['应退回佣金'] = df_taoke_refund['应退回佣金'].astype(f
 df_taoke_refund = df_taoke_refund.reset_index(drop=True)
 df_last_taoke_refund = df_taoke_refund.drop_duplicates(subset=['淘宝子订单编号'], keep='last')
 # --将原始数据存入数据库
-type_dict_order = mapping_df_types(df_last_taoke_refund)
+type_dict_taoke_refund = mapping_df_types(df_last_taoke_refund)
 df_last_taoke_refund.to_sql(name='order_taoke_refund', con=engine, if_exists='append', index=False,
-                            dtype=type_dict_order)
+                            dtype=type_dict_taoke_refund)
 
 # --导出excel到本地
 # writer = pd.ExcelWriter('/home/rich/File/result/excel.xlsx')

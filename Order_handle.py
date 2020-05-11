@@ -4,7 +4,7 @@
 import pandas as pd
 import numpy as np
 from time import time
-import datetime
+from datetime import datetime
 from sqlalchemy import create_engine  # 引擎
 from sqlalchemy.ext.declarative import declarative_base  # 基类
 from sqlalchemy import Column  # sqlalchemy类型
@@ -19,7 +19,7 @@ pd.set_option('display.max_rows', 20)
 pd.set_option('display.max_columns', 30)
 pd.set_option('display.width', 500)
 missing_values = ['n/a', 'na', '--', 'Null', 'NULL']
-rootDir = '/home/rich/MyFile/order/ini'  # 输入根目录的路径
+rootDir = '/home/rich/File/Original'  # 输入根目录的路径
 
 # --sqlalchemy基本操作
 HOSTNAME = "127.0.0.1"
@@ -69,26 +69,43 @@ df_select_taoke_refund.rename(columns={'淘宝子订单编号': '子订单号'},
 df_select_taoke_refund.sort_values(by=['子订单号', '维权完成时间'], ascending=True, inplace=True)  # 数值排序
 df_select_taoke_refund = df_select_taoke_refund.reset_index(drop=True)
 df_last_taoke_refund = df_select_taoke_refund.drop_duplicates(subset=['子订单号'], keep='last')
-print(df_last_taoke_refund.info())
+# print(df_last_taoke_refund.info())
 
-# --生成中间临时表，先对sku数据进行分组汇总，然后形成两个表的交叉汇总
+# --------------------3、提取支付宝账单中有用信息-------------------------#
+select_zhifubao = 'SELECT 业务流水号,商户订单号,发生时间,对方账号,收入金额,支出金额,业务类型,备注 FROM order_zhifubao'
+df_select_zhifubao = pd.read_sql_query(sql=select_zhifubao, con=conn, coerce_float=True,
+                                       parse_dates=None)
+df_select_zhifubao.rename(columns={'发生时间': '交易时间'}, inplace=True)
+df_select_zhifubao.sort_values(by=['业务流水号', '交易时间'], ascending=True, inplace=True)  # 数值排序
+df_select_zhifubao = df_select_zhifubao.reset_index(drop=True)
+df_last_zhifubao = df_select_zhifubao.drop_duplicates(subset=['业务流水号'], keep='last')
+# print(df_last_zhifubao.info())
+
+# ------------------4、读取优惠信息
+df_coupon_info = read_csv_file_to_dataframe(rootDir, 'coupon', missing_values, 0, coding='utf-8')
+# --汇总
 df_grouped = pd.merge(df_last_orders, df_last_taoke, on="子订单号", how="left")
 df_grouped = pd.merge(df_grouped, df_last_taoke_refund, on="子订单号", how="left")
+df_grouped = pd.merge(df_grouped, df_coupon_info, on="订单号", how="left")
 df_grouped[['退款金额', '维权退款金额', '应退回服务费', '应退回佣金']] = df_grouped[
     ['退款金额', '维权退款金额', '应退回服务费', '应退回佣金']].fillna(0)
 df_grouped['淘客成交金额'] = df_grouped['实际成交价格'] - df_grouped['维权退款金额']
 df_grouped['淘客佣金'] = df_grouped['佣金'] - df_grouped['应退回佣金']
 df_grouped['淘客服务费'] = df_grouped['服务费'] - df_grouped['应退回服务费']
-df_grouped.drop(['下载时间', '维权完成时间', '实际成交价格', '维权退款金额', '佣金', '应退回佣金',
-                 '服务费', '应退回服务费'], axis=1,
-                inplace=True)
+df_grouped.drop(['下载时间', '维权完成时间', '实际成交价格', '维权退款金额', '佣金', '应退回佣金', '优惠分摊',
+                 '优惠信息', '服务费', '应退回服务费', '路径', '文件名', '退款申请时间', '退款阶段', '团长',
+                 '买家是否需要退货', '买家实际支付积分', '计划名称', '标价', '运费', '买家实际支付总金额'],
+                axis=1, inplace=True)
+df_grouped['拍下时间'] = df_grouped['拍下时间'].dt.date
+df_grouped['付款时间'] = df_grouped['付款时间'].dt.date
+df_grouped['子订单发货时间'] = df_grouped['子订单发货时间'].dt.date
+df_grouped['交易结束时间'] = df_grouped['交易结束时间'].dt.date
+df_grouped['淘客结算时间'] = df_grouped['淘客结算时间'].dt.date
 print(df_grouped.info())
 
-
 # --导出excel到本地
-writer = pd.ExcelWriter('/home/rich/File/result/excel2.xlsx')
-# df_select_orders.to_excel(writer, sheet_name='订单', header=True, index=False)
-# df_select_taoke.to_excel(writer, sheet_name='淘客', header=True, index=False)
+writer = pd.ExcelWriter('/home/rich/File/result/excel0508.xlsx')
+df_select_zhifubao.to_excel(writer, sheet_name='支付宝', header=True, index=False)
 df_grouped.to_excel(writer, sheet_name='汇总', header=True, index=False)
 writer.save()
 
