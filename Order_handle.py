@@ -92,8 +92,10 @@ df_grouped[['退款金额', '维权退款金额', '应退回服务费', '应退�
 df_grouped['淘客成交金额'] = df_grouped['实际成交价格'] - df_grouped['维权退款金额']
 df_grouped['淘客佣金'] = df_grouped['佣金'] - df_grouped['应退回佣金']
 df_grouped['淘客服务费'] = df_grouped['服务费'] - df_grouped['应退回服务费']
+df_grouped['标识'] = df_grouped['商品ID']+df_grouped['SKUID']
+df_grouped['是否付款'] = df_grouped['付款时间'].isnull()
 df_grouped.drop(['下载时间', '维权完成时间', '实际成交价格', '维权退款金额', '佣金', '应退回佣金', '优惠分摊',
-                 '优惠信息', '服务费', '应退回服务费', '路径', '文件名', '退款申请时间', '退款阶段', '团长',
+                 '优惠信息', '服务费', '应退回服务费', '路径', '文件名', '退款申请时间', '退款阶段',
                  '买家是否需要退货', '买家实际支付积分', '计划名称', '标价', '运费', '买家实际支付总金额'],
                 axis=1, inplace=True)
 df_grouped['拍下时间'] = df_grouped['拍下时间'].dt.date
@@ -102,10 +104,14 @@ df_grouped['子订单发货时间'] = df_grouped['子订单发货时间'].dt.dat
 df_grouped['交易结束时间'] = df_grouped['交易结束时间'].dt.date
 df_grouped['淘客结算时间'] = df_grouped['淘客结算时间'].dt.date
 print(df_grouped.info())
-
+df_grouped_new = df_grouped.loc[df_grouped['活动分组'].isnull(), ['订单号', '优惠详情']]
 # --导出excel到本地
-writer = pd.ExcelWriter('/home/rich/File/result/excel0508.xlsx')
+writer = pd.ExcelWriter('/home/rich/File/result/订单汇总.xlsx')
 df_select_zhifubao.to_excel(writer, sheet_name='支付宝', header=True, index=False)
+df_grouped_new.to_excel(writer, sheet_name='新订单', header=True, index=False)
+# df_last_taoke.to_excel(writer, sheet_name='淘客', header=True, index=False)
+# df_last_taoke_refund.to_excel(writer, sheet_name='淘客退款', header=True, index=False)
+# df_last_orders.to_excel(writer, sheet_name='订单', header=True, index=False)
 df_grouped.to_excel(writer, sheet_name='汇总', header=True, index=False)
 writer.save()
 
