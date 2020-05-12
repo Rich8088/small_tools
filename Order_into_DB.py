@@ -103,10 +103,7 @@ df_last_orders = df_orders.drop_duplicates(subset=['子订单号'], keep='last')
 type_dict_order = mapping_df_types(df_orders)
 df_last_orders.to_sql(name='order_info', con=engine, if_exists='append', index=False,
                       dtype=type_dict_order)
-# --导出excel到本地
-# writer = pd.ExcelWriter('/home/rich/File/result/excel.xlsx')
-# df_last_orders.to_excel(writer, sheet_name='1', header=True, index=False)
-# writer.save()
+
 print(df_last_orders.info())
 end_time = time()  # 计时结束
 print('运行时长： %f' % (end_time - start_time))  # 打印运行时长
