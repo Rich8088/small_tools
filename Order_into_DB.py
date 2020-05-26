@@ -70,7 +70,8 @@ df_orders = df_orders[
      '子订单运单号', '总价', '价格', '单价', '淘宝单价', '实际单价', '实付金额', '运费', '实际收到金额',
      '买家使用积分', '满返红包', '分阶段付款订单状态', '分阶段付款已付金额', '花呗分期期数', '退款状态', '退款货物状态',
      '退款申请时间', '退款更新时间', '退款金额', '退款阶段', '退款原因', '买家是否需要退货', '退货运单号', '优惠分摊',
-     '优惠金额', '优惠详情', '买家留言', '卖家备注', '卖家备注旗帜', '买家是否评价', '下载时间']]
+     '优惠金额', '优惠详情', '买家留言', '卖家备注', '卖家备注旗帜', '买家是否评价', '支付宝交易号', '下载时间']]
+
 df_orders.sort_values(by=['订单号', '子订单号', '下载时间'], ascending=True, inplace=True)  # 数值排序
 # 格式转化
 df_orders['拍下时间'] = pd.to_datetime(df_orders['拍下时间'])
@@ -104,6 +105,6 @@ type_dict_order = mapping_df_types(df_orders)
 df_last_orders.to_sql(name='order_info', con=engine, if_exists='append', index=False,
                       dtype=type_dict_order)
 
-print(df_last_orders.info())
+# print(df_last_orders.info())
 end_time = time()  # 计时结束
 print('运行时长： %f' % (end_time - start_time))  # 打印运行时长

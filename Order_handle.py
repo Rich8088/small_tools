@@ -72,15 +72,19 @@ df_last_taoke_refund = df_select_taoke_refund.drop_duplicates(subset=['子订单
 
 # ------------------3、读取优惠信息
 df_coupon_info = read_csv_file_to_dataframe(rootDir, 'coupon', missing_values, 0, coding='utf-8')
-df_coupon_info['优惠金额'] = df_coupon_info['优惠金额'].astype(float)
+df_coupon_info['购物券金额'] = df_coupon_info['购物券金额'].astype(float)
 df_coupon_info.drop(['路径', '文件名'], axis=1, inplace=True)
+# print(df_coupon_info.info())
+df_taoke_info = read_csv_file_to_dataframe(rootDir, 'taoke_info', missing_values, 0, coding='utf-8')
+df_taoke_info.drop(['路径', '文件名'], axis=1, inplace=True)
+# print(df_taoke_info.info())
+
 # ------------------4、读取地理信息
-df_geo_info = read_csv_file_to_dataframe(rootDir, 'geo_info_city', missing_values, 0,
-                                         coding='utf-8')
+df_geo_info = read_csv_file_to_dataframe(rootDir, 'geo_city', missing_values, 0, coding='utf-8')
 df_geo_info['标识b'] = df_geo_info['省份'] + df_geo_info['城市']
 df_geo_info.drop(['路径', '文件名', '省编号', '行政区域', '省份', '城市', 'tableau城市'], axis=1, inplace=True)
-df_geo_un = read_csv_file_to_dataframe(rootDir, 'geo_info_un', missing_values, 0, coding='utf-8')
-df_geo_un['标识a'] = df_geo_un['省份'] + df_geo_un['省管市']
+df_geo_un = read_csv_file_to_dataframe(rootDir, 'city_un', missing_values, 0, coding='utf-8')
+df_coupon_info['购物券金额'] = df_coupon_info['购物券金额'].astype(float)
 df_geo_un.drop(['路径', '文件名', '省份', '省管市'], axis=1, inplace=True)
 # ------------------5、读取商品信息
 df_product = read_csv_file_to_dataframe(rootDir, 'product', missing_values, 0, coding='utf-8')
@@ -92,8 +96,10 @@ df_product.drop(['路径', '文件名', '商品ID', 'SKU ID', '商品SKU'], axis
 df_grouped = pd.merge(df_last_orders, df_last_taoke, on="子订单号", how="left")
 df_grouped = pd.merge(df_grouped, df_last_taoke_refund, on="子订单号", how="left")
 df_grouped = pd.merge(df_grouped, df_coupon_info, on="订单号", how="left")
+df_grouped = pd.merge(df_grouped, df_taoke_info, on="淘客昵称", how="left")
 df_grouped['是否付款'] = df_grouped['付款时间'].notnull()
 df_grouped['是否淘客'] = df_grouped['淘客结算时间'].notnull()
+df_grouped['是否发货'] = df_grouped['子订单发货时间'].notnull()
 df_grouped['是否退款'] = df_grouped['退款金额'].notnull()
 df_grouped['是否完结'] = df_grouped['交易结束时间'].notnull()
 df_grouped.replace(True, "是", inplace=True)
@@ -108,7 +114,8 @@ df_grouped_order.drop(['下载时间', '维权完成时间', '实际成交价格
                        '服务费', '应退回服务费', '买家实际支付积分', '计划名称', '标价',
                        '买家实际支付总金额'], axis=1, inplace=True)
 df_grouped_order['淘客结算时间'] = df_grouped_order['淘客结算时间'].dt.date
-df_order_new = df_grouped_order.loc[df_grouped_order['活动分组'].isnull(), ['订单号', '优惠详情']]
+df_order_new = df_grouped_order.loc[df_grouped_order['优惠分组'].isnull(),
+                                    ['订单号', '拍下时间', '优惠详情', '淘客昵称', '团长']]
 # print(df_grouped_order.info())
 # --地理信息处理
 df_grouped_order['标识a'] = df_grouped_order['省'] + df_grouped_order['市']
@@ -124,12 +131,14 @@ df_order = pd.merge(df_order, df_geo_info, on="标识b", how="left")
 df_order['人口'] = df_order['人口'].astype(float)
 df_order['纬度'] = df_order['纬度'].astype(float)
 df_order['经度'] = df_order['经度'].astype(float)
+# print(df_order.info())
 # --商品信息处理
 df_order['标识c'] = df_order['商品ID'] + df_order['SKUID']
 df_order = pd.merge(df_order, df_product, on="标识c", how="left")
 df_order_gn = df_order.loc[df_order['省份简称'].isnull(), ['省', '市']]
 df_order_pn = df_order.loc[df_order['商品分组'].isnull(), ['商品ID', 'SKUID']]
-df_order.drop(['标识a', '标识b', '标识c', '省', '市'], axis=1, inplace=True)
+df_order.drop(['标识a', '标识b', '标识c', '省', '市', '优惠详情', 'SKUID', '退款申请时间', '下单时间'], axis=1,
+              inplace=True)
 # print(df_order.info())
 # --导出excel到本地
 writer = pd.ExcelWriter('/home/rich/File/result/订单汇总.xlsx')

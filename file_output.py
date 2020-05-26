@@ -44,8 +44,8 @@ df_last_orders.drop(['下载时间', '卖家备注旗帜'], axis=1, inplace=True
 print(df_last_orders.info())
 
 # --导出excel到本地
-writer = pd.ExcelWriter('/home/rich/File/result/订单汇总.xlsx')
-df_last_orders.to_excel(writer, sheet_name='订单汇总', header=True, index=False)
+writer = pd.ExcelWriter('/home/rich/File/result/订单导出.xlsx')
+df_last_orders.to_excel(writer, sheet_name='订单导出', header=True, index=False)
 writer.save()
 end_time = time()  # 计时结束
 print('运行时长： %f' % (end_time - start_time))  # 打印运行时长

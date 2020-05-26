@@ -109,6 +109,6 @@ df_last_taoke_refund = df_taoke_refund.drop_duplicates(subset=['淘宝子订单�
 type_dict_taoke_refund = mapping_df_types(df_last_taoke_refund)
 df_last_taoke_refund.to_sql(name='order_taoke_refund', con=engine, if_exists='append', index=False,
                             dtype=type_dict_taoke_refund)
-
+print(df_last_taoke)
 end_time = time()  # 计时结束
 print('运行时长： %f' % (end_time - start_time))  # 打印运行时长
