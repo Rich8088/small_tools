@@ -68,7 +68,7 @@ df_select_taoke_refund.rename(columns={'淘宝子订单编号': '子订单号', 
 df_select_taoke_refund.sort_values(by=['子订单号', '维权完成时间'], ascending=True, inplace=True)
 df_select_taoke_refund = df_select_taoke_refund.reset_index(drop=True)
 df_last_taoke_refund = df_select_taoke_refund.drop_duplicates(subset=['子订单号'], keep='last')
-# print(df_last_taoke_refund)
+# print(df_last_taoke_refund.info())
 
 # 合并淘客及淘客维权信息
 df_update_taoke = pd.merge(df_last_taoke, df_last_taoke_refund, on="子订单号", how="left")
@@ -86,7 +86,7 @@ df_update_taoke.drop(['维权完成时间', '实际成交价格', '维权退款�
 # ------------------3、读取优惠信息
 df_coupon_info = read_csv_file_to_dataframe(rootDir, 'coupon', missing_values, 0, coding='utf-8')
 df_coupon_info['购物券金额'] = df_coupon_info['购物券金额'].astype(float)
-df_coupon_info.drop(['路径', '文件名'], axis=1, inplace=True)
+df_coupon_info = df_coupon_info[['订单号', '优惠券信息', '优惠券类型', '优惠分组', '购物券类型', '购物券金额']]
 # print(df_coupon_info.info())
 df_taoke_info = read_csv_file_to_dataframe(rootDir, 'taoke_info', missing_values, 0, coding='utf-8')
 df_taoke_info.drop(['路径', '文件名'], axis=1, inplace=True)
@@ -106,7 +106,7 @@ df_geo_un.drop(['路径', '文件名', '省份', '省管市'], axis=1, inplace=T
 df_product = read_csv_file_to_dataframe(rootDir, 'product', missing_values, 0, coding='utf-8')
 df_product['标识c'] = df_product['商品ID'] + df_product['SKU ID']
 df_product.drop(['路径', '文件名', '商品ID', 'SKU ID', '商品SKU'], axis=1, inplace=True)
-# print(df_product)
+# print(df_product.info())
 
 # --汇总
 df_grouped = pd.merge(df_last_orders, df_update_taoke, on="子订单号", how="left")
@@ -117,26 +117,39 @@ df_grouped['是否淘客'] = df_grouped['淘客结算时间'].notnull()
 df_grouped['是否发货'] = df_grouped['子订单发货时间'].notnull()
 df_grouped['是否退款'] = df_grouped['退款金额'].notnull()
 df_grouped['是否完结'] = df_grouped['交易结束时间'].notnull()
+df_grouped['是否使用购物券'] = df_grouped['购物券类型'].notnull()
 df_grouped.replace(True, "是", inplace=True)
 df_grouped.replace(False, "否", inplace=True)
-df_grouped.drop(['下载时间', '标价', '运费', '计划名称', '下单时间', '买家实际支付总金额'], axis=1, inplace=True)
-df_order_new = df_grouped.loc[df_grouped['优惠分组'].isnull(),
-                              ['订单号', '拍下时间', '优惠详情', '淘客昵称', '团长']]
+df_grouped.drop(['下载时间', '标价', '运费', '计划名称', '买家实际支付总金额'], axis=1, inplace=True)
+df_order_new = df_grouped.loc[df_grouped['优惠分组'].isnull(), ['订单号', '拍下时间', '优惠详情']]
+# --淘客信息处理
+df_tk = df_grouped.loc[df_grouped['淘客结算时间'].notnull(), ['淘客昵称', '团长', '淘客成交金额']]
+df_tk.sort_values(by=['淘客昵称', '团长', '淘客成交金额'], ascending=True, inplace=True)
+df_tk_N = df_tk.drop_duplicates(subset=['淘客昵称'], keep='last')
 # --地理信息处理
-df_grouped['标识a'] = df_grouped['省'] + df_grouped['市']
+df_grouped['标识a'] = df_grouped['省'] + df_grouped['区']
 df_grouped = pd.merge(df_grouped, df_geo_un, on="标识a", how="left")
 df1 = pd.DataFrame(df_grouped.loc[df_grouped['对应省'].isnull()])
-df0 = pd.DataFrame(df_grouped.loc[df_grouped['对应省'].notnull()])
 df1.drop(['对应省', '对应市'], axis=1, inplace=True)
+df0 = pd.DataFrame(df_grouped.loc[df_grouped['对应省'].notnull()])
 df0.drop(['省', '市'], axis=1, inplace=True)
 df0.rename(columns={'对应省': '省', '对应市': '市'}, inplace=True)
-df_order = pd.concat([df1, df0], axis=0, ignore_index=True)
+
+df_order1 = pd.concat([df1, df0], axis=0, ignore_index=True)
+df_order1['标识a'] = df_order1['省'] + df_order1['市']
+df_order1 = pd.merge(df_order1, df_geo_un, on="标识a", how="left")
+df11 = pd.DataFrame(df_order1.loc[df_order1['对应省'].isnull()])
+df11.drop(['对应省', '对应市'], axis=1, inplace=True)
+df01 = pd.DataFrame(df_order1.loc[df_order1['对应省'].notnull()])
+df01.drop(['省', '市'], axis=1, inplace=True)
+df01.rename(columns={'对应省': '省', '对应市': '市'}, inplace=True)
+df_order = pd.concat([df11, df01], axis=0, ignore_index=True)
 df_order['标识b'] = df_order['省'] + df_order['市']
 df_order = pd.merge(df_order, df_geo_info, on="标识b", how="left")
 df_order['人口'] = df_order['人口'].astype(float)
 df_order['纬度'] = df_order['纬度'].astype(float)
 df_order['经度'] = df_order['经度'].astype(float)
-# print(df_order.info())
+
 # --商品信息处理
 fna_values = {'SKUID': '-'}
 df_order = df_order.fillna(value=fna_values)
@@ -144,16 +157,24 @@ df_order['标识c'] = df_order['商品ID'] + df_order['SKUID']
 df_order = pd.merge(df_order, df_product, on="标识c", how="left")
 df_order_gn = df_order.loc[df_order['省份简称'].isnull(), ['省', '市', '区', '订单号']]
 df_order_pn = df_order.loc[df_order['商品分组'].isnull(), ['商品ID', 'SKUID', '订单号']]
-df_order.drop(['标识a', '标识b', '标识c', '优惠详情', '人口', '类别序号'], axis=1, inplace=True)
+df_order['组合件数'] = df_order['组合件数'].astype(float)
+df_order.drop(['标识a', '标识b', '标识c', '优惠详情', '人口'], axis=1, inplace=True)
+# --去重复并且排序
+df_order.sort_values(by=['拍下时间', '订单号', '子订单号'], ascending=True, inplace=True)
+df_order_b = df_order.drop_duplicates(subset=['订单号'], keep='last')
+df_order = pd.merge(df_order, df_order_b[['子订单号', '购物券金额']], on="子订单号", how="left")
+df_order = df_order.reset_index(drop=True)
+df_order.drop(['购物券金额_x'], axis=1, inplace=True)
+df_order.rename(columns={'购物券金额_y': '购物券金额'}, inplace=True)
 print(df_order.info())
 
 # --导出excel到本地
 writer = pd.ExcelWriter('/home/rich/File/result/订单汇总.xlsx')
+df_tk_N.to_excel(writer, sheet_name='淘客', header=True, index=False)
 df_order_new.to_excel(writer, sheet_name='新订单', header=True, index=False)
 df_order_gn.to_excel(writer, sheet_name='新省市', header=True, index=False)
 df_order_pn.to_excel(writer, sheet_name='新商品', header=True, index=False)
-df_order.to_excel(writer, sheet_name='汇总', header=True, index=False)
 writer.save()
-
+df_order.to_csv('/home/rich/File/result/order.csv')
 end_time = time()  # 计时结束
 print('运行时长： %f' % (end_time - start_time))  # 打印运行时长
